@@ -12,6 +12,14 @@ The GIF below illustrates a conceptual representation of the procedure applied o
   <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/gif/Veneto_box_beta_gamma_v3.gif" alt="Seasonal_Climatology" />
 </div>
 
+## MEVD Example
+
+The figure below illustrates the results obtained using the Metastatistical Extreme Value Distribution (MEVD) for six different precipitation products, considering a 50-year return period. Each panel represents the estimated extreme precipitation for the corresponding product over the study area.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/gif/Veneto_box_beta_gamma_v3.gif" alt="Seasonal_Climatology" />
+</div>
+
 ## Bias Correction
 
 The repository also implements a bias correction procedure to adjust satellite-derived precipitation statistics using rain gauge observations. The correction is applied at the pixel level and is based on the ratio between rain gauge measurements and satellite estimates.
@@ -19,6 +27,10 @@ The repository also implements a bias correction procedure to adjust satellite-d
 First, a correction factor (OBS/SAT) is computed at each rain gauge location for the parameter of interest (e.g., number of wet days, scale, or shape parameters). These station-based correction factors are then spatially interpolated onto the grid of the satellite rainfall product (e.g., GSMaP), producing a continuous correction map over the entire study domain. Finally, the satellite-derived parameters are adjusted using this interpolated correction field.
 
 For example, the correction of the number of wet days is obtained by computing the OBS/SAT ratio at rain gauge locations and interpolating this information to the satellite grid. The resulting field is then used to derive the corrected value of the parameter across all pixels. The same procedure is applied to correct the scale and shape parameters of the rainfall distribution.
+
+## Zenodo Repository
+
+The results obtained for the satellite and reanalysis products, including outputs from GEV, MEVD, and MEVD-downscaling, are openly available and can be accessed from the following Zenodo repository: [https://zenodo.org/records/18885925](https://zenodo.org/records/18885925).
 
 ## References
 
