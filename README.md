@@ -26,4 +26,4 @@ For example, the correction of the number of wet days is obtained by computing t
 
 <a id="ref2"></a>[2] Marra F, Borga M, Morin E (2020). *A Uniﬁed Framework for Extreme Subdaily Precipitation Frequency Analyses Based on Ordinary Events*. Geophysical Research Letters 47: 1-8. https://doi.org/10.1029/2020GL090209
 
-<a id="ref2"></a>[3] Zorzetto E, Marani M (2018) Downscaling of Rainfall Extremes From Satellite Observations. Water Resources Research 55(1): 156-174. http://doi.org/10.1029/2018WR022950
+<a id="ref3"></a>[3] Zorzetto E, Marani M (2018) Downscaling of Rainfall Extremes From Satellite Observations. Water Resources Research 55(1): 156-174. http://doi.org/10.1029/2018WR022950
