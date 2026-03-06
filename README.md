@@ -17,7 +17,7 @@ The GIF below illustrates a conceptual representation of the procedure applied o
 The figure below illustrates the results obtained using the Metastatistical Extreme Value Distribution (MEVD) for six different precipitation products, considering a 50-year return period. Each panel represents the estimated extreme precipitation for the corresponding product over the study area.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/gif/Veneto_box_beta_gamma_v3.gif" alt="Seasonal_Climatology" />
+  <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/ALL/Quantiles_ALL_MEV_raw_50yrs.png" alt="Seasonal_Climatology" />
 </div>
 
 ## Bias Correction
