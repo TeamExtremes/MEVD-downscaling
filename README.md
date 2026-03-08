@@ -28,6 +28,10 @@ First, a correction factor (OBS/SAT) is computed at each rain gauge location for
 
 For example, the correction of the number of wet days is obtained by computing the OBS/SAT ratio at rain gauge locations and interpolating this information to the satellite grid. The resulting field is then used to derive the corrected value of the parameter across all pixels. The same procedure is applied to correct the scale and shape parameters of the rainfall distribution.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/ALL/Quantiles_ALL_MEV_raw_50yrs.png" alt="Seasonal_Climatology" />
+</div>
+
 ## Zenodo Repository
 
 The results obtained for the satellite and reanalysis products, including outputs from GEV, MEVD, and MEVD-downscaling, are openly available and can be accessed from the following Zenodo repository: [https://zenodo.org/records/18885925](https://zenodo.org/records/18885925).
