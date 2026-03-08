@@ -12,7 +12,7 @@ The GIF below illustrates a conceptual representation of the procedure applied o
   <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/gif/Veneto_box_beta_gamma_v3.gif" alt="Seasonal_Climatology" />
 </div>
 
-## MEV Example
+### MEV Example
 
 The figure below illustrates the results obtained using the Metastatistical Extreme Value Distribution (MEVD) for six different precipitation products, considering a 50-year return period. Each panel represents the estimated extreme precipitation for the corresponding product over the study area.
 
@@ -27,6 +27,10 @@ The repository also implements a bias correction procedure to adjust satellite-d
 First, a correction factor (OBS/SAT) is computed at each rain gauge location for the parameter of interest (e.g., number of wet days, scale, or shape parameters). These station-based correction factors are then spatially interpolated onto the grid of the satellite rainfall product (e.g., GSMaP), producing a continuous correction map over the entire study domain. Finally, the satellite-derived parameters are adjusted using this interpolated correction field.
 
 For example, the correction of the number of wet days is obtained by computing the OBS/SAT ratio at rain gauge locations and interpolating this information to the satellite grid. The resulting field is then used to derive the corrected value of the parameter across all pixels. The same procedure is applied to correct the scale and shape parameters of the rainfall distribution.
+
+### Correction Example
+
+The figure below presents an example of the bias-correction procedure applied to extreme precipitation quantiles for Tr = 50 years. The first panel shows the extreme quantiles derived from rain gauge observations across Italy, representing the reference values. The second panel illustrates the corresponding quantiles estimated from the satellite product using the GEV distribution. Finally, the third panel shows the corrected GEV quantiles obtained after applying the bias-correction procedure based on the rain gauge information.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/corrected/Quantiles_IMERG_GEV_raw_50yrs.png" alt="Seasonal_Climatology" />
