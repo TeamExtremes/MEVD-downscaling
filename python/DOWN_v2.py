@@ -291,8 +291,8 @@ DOWN_xr.WYs.attrs["long_name"] = "Weibull shape parameter"
 DOWN_xr.WYs.attrs["origname"] = "Shape"
 
 DOWN_xr.Mev_s.attrs["units"] = "mm/day"
-DOWN_xr.Mev_s.attrs["long_name"] = "Satellite Maximum Quantiles"
-DOWN_xr.Mev_s.attrs["origname"] = "Sat quantiles"
+DOWN_xr.Mev_s.attrs["long_name"] = "Satellite Maximum Annual Daily"
+DOWN_xr.Mev_s.attrs["origname"] = "Satellite quantiles"
 
 DOWN_xr.NYd.attrs["units"] = "day"
 DOWN_xr.NYd.attrs["long_name"] = "Downscale Number of wet days"
@@ -307,7 +307,7 @@ DOWN_xr.WYd.attrs["long_name"] = "Downscale Weibull shape parameter"
 DOWN_xr.WYd.attrs["origname"] = "Down shape"
 
 DOWN_xr.Mev_d.attrs["units"] = "mm/day"
-DOWN_xr.Mev_d.attrs["long_name"] = "Downscaling Maximum Quantiles"
+DOWN_xr.Mev_d.attrs["long_name"] = "Downscaling Maximum Annual Daily"
 DOWN_xr.Mev_d.attrs["origname"] = "Downscaling quantiles"
 
 DOWN_xr.BETA.attrs["units"] = "dimensionless"
