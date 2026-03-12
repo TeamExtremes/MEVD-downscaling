@@ -1,0 +1,9 @@
+{
+    "file":"CMORPH_Italy_3hr_1998_01_01_2023_12_31.nc",
+    "npix":2,
+    "cores":22,
+    "thresh":1,
+    "acf":"mar",
+    "corr_method":"pearson",
+    "opt_method":"genetic"
+}

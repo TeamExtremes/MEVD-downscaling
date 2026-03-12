@@ -41,11 +41,11 @@ Tr = np.array([5, 10, 20, 50, 100])
 # # Fast area
 # lon_min, lon_max, lat_min, lat_max, area, toll = 11.5, 12, 45.5, 46, 'FAST', 0.05
 # # Test area
-# lon_min, lon_max, lat_min, lat_max, area, toll = 11, 12.5, 45, 46.5, 'TEST', 0.05
+lon_min, lon_max, lat_min, lat_max, area, toll = 11, 12.5, 45, 46.5, 'TEST', 0.05
 # # Veneto area
 # lon_min, lon_max, lat_min, lat_max, area, toll = 10.5, 13.5, 44.5, 47, 'VENETO', 0.002
 # # Italy
-lon_min, lon_max, lat_min, lat_max, area, toll = 6.5, 19, 36.5, 48, 'ITALY', 0.002
+# lon_min, lon_max, lat_min, lat_max, area, toll = 6.5, 19, 36.5, 48, 'ITALY', 0.002
 
 # =============================================================================
 json_read = f'../json/{product}_{time_reso}.json'
@@ -74,10 +74,8 @@ print(f'Reading data: {param['file']}')
 print()
 dir_data_1 = os.path.join(f'../data/{param["file"]}')
 dir_base = os.path.join('/', 'media', 'arturo', 'Arturo', 'Data', 'Italy', 'Satellite')
-if product == 'SM2RAIN':
-    dir_data_2 = os.path.join(dir_base,product,'ASCAT',time_reso,param['file'])
-else:
-    dir_data_2 = os.path.join(dir_base,product,time_reso,param['file'])
+
+dir_data_2 = os.path.join(dir_base,product,time_reso,param['file'])
 
 if os.path.exists(dir_data_1):
     dir_data = dir_data_1
@@ -91,10 +89,7 @@ else:
 PRE_data = xr.open_dataset(dir_data)
 PRE_data = PRE_data.sel(time=PRE_data.time.dt.year.isin([np.arange(yy_s,yy_e+1)]))
 
-if product == 'MSWEP' or product == 'PERSIANN' or product == 'SM2RAIN' or product == 'ERA5' or product == 'GSMaP':
-    PRE_data = PRE_data.sel(lat=slice(lat_max+1.5, lat_min-1.5), lon=slice(lon_min-1.5, lon_max+1.5))
-else:
-    PRE_data = PRE_data.sel(lat=slice(lat_min-1.5, lat_max+1.5), lon=slice(lon_min-1.5, lon_max+1.5))
+PRE_data = PRE_data.sel(lat=slice(lat_min-1.5, lat_max+1.5), lon=slice(lon_min-1.5, lon_max+1.5))
 
 lats = PRE_data['lat'].data
 lons = PRE_data['lon'].data
@@ -112,10 +107,7 @@ PRE_data = PRE_data.where(PRE_data >= 0)  # Reemplaza valores negativos con NaN
 # =============================================================================
 print(f'Extracting lat and lon points for area')
 print()
-if product == 'MSWEP' or product == 'PERSIANN' or product == 'SM2RAIN' or product == 'ERA5' or product == 'GSMaP':
-    PRE_veneto = PRE_data.sel(lat=slice(lat_max, lat_min), lon=slice(lon_min, lon_max))
-else:
-    PRE_veneto = PRE_data.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
+PRE_veneto = PRE_data.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
 
 lat_ref = PRE_veneto.lat.values
 lon_ref = PRE_veneto.lon.values

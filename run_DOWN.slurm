@@ -22,27 +22,27 @@ cd ~/downpy/python/
 # IMERG3h, CMORPH, ERA53h, GSMaP, MSWEP
 
 if [[ "$product" == "PERSIANN" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr PERSIANN -tr 1dy -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr PERSIANN -tr 1dy -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "SM2RAIN" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr SM2RAIN -tr 1dy -ys 2007 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr SM2RAIN -tr 1dy -ys 2007 -ye 2023 "${@:2}"
 elif [[ "$product" == "MSWEP" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr MSWEP -tr 3h -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr MSWEP -tr 3h -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "CMORPH" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr CMORPH -tr 3h -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr CMORPH -tr 3h -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "ERA51dy" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr ERA5 -tr 1dy -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr ERA5 -tr 1dy -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "ERA53h" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr ERA5 -tr 3h -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr ERA5 -tr 3h -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "IMERG1dy" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr IMERG -tr 1dy -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr IMERG -tr 1dy -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "IMERG3h" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr IMERG -tr 3h -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr IMERG -tr 3h -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "CHIRPS" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR_point.py -pr CHIRPS -tr 1dy -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr CHIRPS -tr 1dy -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "GSMaP3h" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr GSMaP -tr 3h -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr GSMaP -tr 3h -ys 2002 -ye 2023 "${@:2}"
 elif [[ "$product" == "GSMaP1dy" ]]; then
-    srun ~/.conda/envs/AXE/bin/python 1_DOWN_ZOR.py -pr GSMaP -tr 1dy -ys 2002 -ye 2023 "${@:2}"
+    srun ~/.conda/envs/AXE/bin/python 1_DOWN_v1.py -pr GSMaP -tr 1dy -ys 2002 -ye 2023 "${@:2}"
 else
     echo "Error: $product not found."
     echo "Use IMERG3h, IMERG1dy, MSWEP, CMORPH, ERA53h, ERA51dy, PERSIANN, GSMaP3h, GSMaP1dy, SM2RAIN or CHIRPS."

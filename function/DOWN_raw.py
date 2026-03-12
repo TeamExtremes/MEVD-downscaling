@@ -1092,7 +1092,7 @@ def downscale(xdata, Tr, *, thresh=1, L0, acf='mar', dt=3,
     Ws = NCW[2]
 
     # Taylor Hypothesis for downscaling intermittency
-    print('Downscaling Intermittency')
+    # print('Downscaling Intermittency')
     # taylor = downscale_pwet(xdata, thresh=thresh, dt=dt, L1=L1,
     #                 target_x=L0, target_t=tscale,
     #                 origin_x=L1, origin_t=tscale, ninterp=1000, plot=plot)
@@ -1105,11 +1105,11 @@ def downscale(xdata, Tr, *, thresh=1, L0, acf='mar', dt=3,
         taylor['beta'] = -999.9
         print(f"Error in downscale_pwet: {e}")
 
-    print('Downscaling the correlation')
+    # print('Downscaling the correlation')
     parnames = ['eps', 'alp'] if acf == 'mar' else ['d0', 'mu0']
 
     # Correlation downscaling
-    print('Computing the correlation')
+    # print('Computing the correlation')
     rcorr = grid_corr(xdaily, plot=plot, thresh=thresh, cor_method=cor_method)
     gam_s = vrf(L1, L0, (rcorr['{}_s'.format(parnames[0])],
                             rcorr['{}_s'.format(parnames[1])]), acf=acf)
@@ -1119,12 +1119,12 @@ def downscale(xdata, Tr, *, thresh=1, L0, acf='mar', dt=3,
                         plot=plot)
 
     # downscaling the Weibull pdf
-    print('Downscaling pdf - global Weibull parameters')
+    # print('Downscaling pdf - global Weibull parameters')
     par_acf = (dcorr['{}_d'.format(parnames[0])], dcorr['{}_d'.format(parnames[1])])
 
     Nd, Cd, Wd, gam_d, fval_w = down_wei(Ns, Cs, Ws, L1, L0, taylor['beta'], par_acf, acf=acf)
 
-    print('Downscaling pdf - yearly Weibull parameters')
+    # print('Downscaling pdf - yearly Weibull parameters')
     NCWy, YEARSy = fit_yearly_weibull(tsc, thresh=thresh, maxmiss=maxmiss)
     NYd, CYd, WYd, _, _ = down_wei(NCWy[:,0], NCWy[:,1], NCWy[:,2], L1, L0, taylor['beta'], par_acf, acf=acf)
 
