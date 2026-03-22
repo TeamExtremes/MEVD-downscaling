@@ -20,6 +20,26 @@ The figure below illustrates the results obtained using the Metastatistical Extr
   <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/ALL/Quantiles_ALL_MEV_raw_50yrs.png" alt="Seasonal_Climatology" />
 </div>
 
+## Validation
+
+The validation of the results is performed using the relative error (RE), defined as:
+
+$$
+RE = \frac{Q_{est} - Q_{obs}}{Q_{obs}}
+$$
+
+where $Q_{est}$ represents the estimated extreme quantiles and $Q_{obs}$ corresponds to the observed 
+quantiles derived from rain gauge measurements.
+
+The figure below is part of the validation analysis and shows the scatter plot of 50 years extreme quantiles 
+obtained from the satellite/reanalysis (RSR) products against the observed (OBS) quantiles. This 
+comparison allows the assessment of the performance of the modelling and downscaling framework in 
+reproducing observed extreme precipitation behavior.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/RE/downscaled/Products_DOWN_RE_scatter.png" alt="Seasonal_Climatology" />
+</div>
+
 ## Bias Correction
 
 The repository also implements a bias correction procedure to adjust satellite-derived precipitation statistics using rain gauge observations. The correction is applied at the pixel level and is based on the ratio between rain gauge measurements and satellite estimates.
