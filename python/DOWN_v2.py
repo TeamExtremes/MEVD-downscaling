@@ -104,17 +104,17 @@ PRE_data = PRE_data.where(PRE_data >= 0)
 # =============================================================================
 print(f'Extracting lat and lon points for {area} area')
 print()
-PRE_veneto = PRE_data.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
+PRE_study = PRE_data.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
 
-lat_ref = PRE_veneto.lat.values
-lon_ref = PRE_veneto.lon.values
+lat_ref = PRE_study.lat.values
+lon_ref = PRE_study.lon.values
 
 ndices_lat = np.where(np.isin(lats, lat_ref))[0]
 ndices_lon = np.where(np.isin(lons, lon_ref))[0]
 
 lon2d_ref, lat2d_ref = np.meshgrid(lon_ref, lat_ref)
 
-del PRE_veneto
+del PRE_study
 
 # =============================================================================
 def downscale_clear(DATA_3h,la,lo, param):
