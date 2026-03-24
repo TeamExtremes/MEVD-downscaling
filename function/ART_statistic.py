@@ -1,6 +1,7 @@
 import os
 import rasterio
 import numpy as np
+import pandas as pd
 import xarray as xr
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
@@ -233,3 +234,295 @@ def export_geotiff_utm(DATA_input, lat, lon, dist, nameout, utm_epsg="EPSG:32632
         dst.write(DATA, 1)
 
     print(f"✅ Exported GeoTIFF (UTM): {out_path}")
+
+def calculate_mare(obs, mod, eps=1e-6):
+    """
+    Mean Absolute Relative Error (MARE)
+
+    obs, mod : arrays (nt, ny, nx) o compatibles
+    eps      : evita división por cero
+    """
+    re = (mod - obs) / (obs + eps)
+    return np.nanmean(np.abs(re), axis=0)
+
+def calculate_rmse(obs, mod):
+    """
+    Root Mean Squared Error (RMSE)
+
+    obs, mod : arrays (nt, ny, nx) o compatibles
+    """
+    mse = (mod - obs) ** 2
+    return np.sqrt(np.nanmean(mse, axis=0))
+
+def calculate_nse(obs, mod, axis=0):
+    """
+    Nash-Sutcliffe Efficiency (NSE)
+
+    obs, mod : arrays (nt, ny, nx) o similares
+    axis     : eje temporal (default=0)
+
+    Returns:
+        NSE por pixel (ny, nx)
+    """
+    num = np.nansum((mod - obs) ** 2, axis=axis)
+    den = np.nansum((obs - np.nanmean(obs, axis=axis)) ** 2, axis=axis)
+
+    return 1 - (num / (den + 1e-12))
+
+def calculate_kge(obs, mod, axis=0):
+    """
+    Kling-Gupta Efficiency (KGE)
+
+    Descompone en:
+    - correlación (r)
+    - variabilidad (alpha = std_mod / std_obs)
+    - sesgo (beta = mean_mod / mean_obs)
+
+    Returns:
+        KGE por pixel (ny, nx)
+    """
+
+    obs_mean = np.nanmean(obs, axis=axis)
+    mod_mean = np.nanmean(mod, axis=axis)
+
+    obs_std = np.nanstd(obs, axis=axis)
+    mod_std = np.nanstd(mod, axis=axis)
+
+    # Correlación (pixel-wise)
+    obs_anom = obs - obs_mean
+    mod_anom = mod - mod_mean
+
+    cov = np.nanmean(obs_anom * mod_anom, axis=axis)
+    r = cov / (obs_std * mod_std + 1e-12)
+
+    # Componentes KGE
+    alpha = mod_std / (obs_std + 1e-12)
+    beta = mod_mean / (obs_mean + 1e-12)
+
+    kge = 1 - np.sqrt((r - 1) ** 2 + (alpha - 1) ** 2 + (beta - 1) ** 2)
+
+    return kge
+
+def Statistics_RAW_DOWN(DF_IMERG, DF_CMORPH, DF_MSWEP, DF_ERA5, DF_GSMaP, DF_CHIRPS, DF_ENSEMBLE_MEDIAN):
+    
+    labels = ["IMERG", "CMORPH", "MSWEP", "ERA5", "GSMaP", "CHIRPS", "ENSEMBLE"]
+
+    # ==================================================================================================================
+    ## RAW METRICS FOR DAILY ANNUAL MAXIMA (QUANTILES)
+    RAW_mare = np.array([
+                    np.round(calculate_mare(DF_IMERG.Mevd_OBS, DF_IMERG.Mevd_SAT),3),
+                    np.round(calculate_mare(DF_CMORPH.Mevd_OBS, DF_CMORPH.Mevd_SAT),3),
+                    np.round(calculate_mare(DF_MSWEP.Mevd_OBS, DF_MSWEP.Mevd_SAT),3),
+                    np.round(calculate_mare(DF_ERA5.Mevd_OBS, DF_ERA5.Mevd_SAT),3),
+                    np.round(calculate_mare(DF_GSMaP.Mevd_OBS, DF_GSMaP.Mevd_SAT),3),
+                    np.round(calculate_mare(DF_CHIRPS.Mevd_OBS, DF_CHIRPS.Mevd_SAT),3),
+                    np.round(calculate_mare(DF_ENSEMBLE_MEDIAN.Mevd_OBS, DF_ENSEMBLE_MEDIAN.Mevd_SAT),3)
+                    ])
+
+    RAW_rmse = np.array([
+                    np.round(calculate_rmse(DF_IMERG.Mevd_OBS, DF_IMERG.Mevd_SAT),3),
+                    np.round(calculate_rmse(DF_CMORPH.Mevd_OBS, DF_CMORPH.Mevd_SAT),3),
+                    np.round(calculate_rmse(DF_MSWEP.Mevd_OBS, DF_MSWEP.Mevd_SAT),3),
+                    np.round(calculate_rmse(DF_ERA5.Mevd_OBS, DF_ERA5.Mevd_SAT),3),
+                    np.round(calculate_rmse(DF_GSMaP.Mevd_OBS, DF_GSMaP.Mevd_SAT),3),
+                    np.round(calculate_rmse(DF_CHIRPS.Mevd_OBS, DF_CHIRPS.Mevd_SAT),3),
+                    np.round(calculate_rmse(DF_ENSEMBLE_MEDIAN.Mevd_OBS, DF_ENSEMBLE_MEDIAN.Mevd_SAT),3)
+                    ])
+
+    RAW_nse = np.array([
+                    np.round(calculate_nse(DF_IMERG.Mevd_OBS, DF_IMERG.Mevd_SAT),3),
+                    np.round(calculate_nse(DF_CMORPH.Mevd_OBS, DF_CMORPH.Mevd_SAT),3),
+                    np.round(calculate_nse(DF_MSWEP.Mevd_OBS, DF_MSWEP.Mevd_SAT),3),
+                    np.round(calculate_nse(DF_ERA5.Mevd_OBS, DF_ERA5.Mevd_SAT),3),
+                    np.round(calculate_nse(DF_GSMaP.Mevd_OBS, DF_GSMaP.Mevd_SAT),3),
+                    np.round(calculate_nse(DF_CHIRPS.Mevd_OBS, DF_CHIRPS.Mevd_SAT),3),
+                    np.round(calculate_nse(DF_ENSEMBLE_MEDIAN.Mevd_OBS, DF_ENSEMBLE_MEDIAN.Mevd_SAT),3)
+                    ])
+
+    RAW_kge = np.array([
+                    np.round(calculate_kge(DF_IMERG.Mevd_OBS, DF_IMERG.Mevd_SAT),3),
+                    np.round(calculate_kge(DF_CMORPH.Mevd_OBS, DF_CMORPH.Mevd_SAT),3),
+                    np.round(calculate_kge(DF_MSWEP.Mevd_OBS, DF_MSWEP.Mevd_SAT),3),
+                    np.round(calculate_kge(DF_ERA5.Mevd_OBS, DF_ERA5.Mevd_SAT),3),
+                    np.round(calculate_kge(DF_GSMaP.Mevd_OBS, DF_GSMaP.Mevd_SAT),3),
+                    np.round(calculate_kge(DF_CHIRPS.Mevd_OBS, DF_CHIRPS.Mevd_SAT),3),
+                    np.round(calculate_kge(DF_ENSEMBLE_MEDIAN.Mevd_OBS, DF_ENSEMBLE_MEDIAN.Mevd_SAT),3)
+                    ])
+
+    RAW_corrs = np.array([
+        np.round(DF_IMERG.Mevd_OBS.corr(DF_IMERG.Mevd_SAT),3),
+        np.round(DF_CMORPH.Mevd_OBS.corr(DF_CMORPH.Mevd_SAT),3),
+        np.round(DF_MSWEP.Mevd_OBS.corr(DF_MSWEP.Mevd_SAT),3),
+        np.round(DF_ERA5.Mevd_OBS.corr(DF_ERA5.Mevd_SAT),3),
+        np.round(DF_GSMaP.Mevd_OBS.corr(DF_GSMaP.Mevd_SAT),3),
+        np.round(DF_CHIRPS.Mevd_OBS.corr(DF_CHIRPS.Mevd_SAT),3),
+        np.round(DF_ENSEMBLE_MEDIAN.Mevd_OBS.corr(DF_ENSEMBLE_MEDIAN.Mevd_SAT),3)
+    ])
+
+    ## RER METRICS FOR RELATIVE ERRORS ANALYSIS
+    RAW_std = np.array([
+                    np.round(np.std(DF_IMERG.RE_SAT),3),
+                    np.round(np.std(DF_CMORPH.RE_SAT),3), 
+                    np.round(np.std(DF_MSWEP.RE_SAT),3),
+                    np.round(np.std(DF_ERA5.RE_SAT),3), 
+                    np.round(np.std(DF_GSMaP.RE_SAT),3),
+                    np.round(np.std(DF_CHIRPS.RE_SAT),3),
+                    np.round(np.std(DF_ENSEMBLE_MEDIAN.RE_SAT),3)
+                    ])
+
+    RAW_mean = np.array([
+        np.round(np.nanmean(DF_IMERG.RE_SAT),3),
+        np.round(np.nanmean(DF_CMORPH.RE_SAT),3),
+        np.round(np.nanmean(DF_MSWEP.RE_SAT),3),
+        np.round(np.nanmean(DF_ERA5.RE_SAT),3),
+        np.round(np.nanmean(DF_GSMaP.RE_SAT),3),
+        np.round(np.nanmean(DF_CHIRPS.RE_SAT),3),
+        np.round(np.nanmean(DF_ENSEMBLE_MEDIAN.RE_SAT),3)
+    ])
+
+    RAW_median = np.array([
+        np.round(np.nanmedian(DF_IMERG.RE_SAT),3),
+        np.round(np.nanmedian(DF_CMORPH.RE_SAT),3),
+        np.round(np.nanmedian(DF_MSWEP.RE_SAT),3),
+        np.round(np.nanmedian(DF_ERA5.RE_SAT),3),
+        np.round(np.nanmedian(DF_GSMaP.RE_SAT),3),
+        np.round(np.nanmedian(DF_CHIRPS.RE_SAT),3),
+        np.round(np.nanmedian(DF_ENSEMBLE_MEDIAN.RE_SAT),3)
+    ])
+
+    RAW_diff = abs(RAW_mean - RAW_median)
+
+    RAW_IQ = np.array([
+        np.round(np.nanpercentile(DF_IMERG.RE_SAT, 75) - np.nanpercentile(DF_IMERG.RE_SAT, 25),3),
+        np.round(np.nanpercentile(DF_CMORPH.RE_SAT, 75) - np.nanpercentile(DF_CMORPH.RE_SAT, 25),3),
+        np.round(np.nanpercentile(DF_MSWEP.RE_SAT, 75) - np.nanpercentile(DF_MSWEP.RE_SAT, 25),3),
+        np.round(np.nanpercentile(DF_ERA5.RE_SAT, 75) - np.nanpercentile(DF_ERA5.RE_SAT, 25),3),
+        np.round(np.nanpercentile(DF_GSMaP.RE_SAT, 75) - np.nanpercentile(DF_GSMaP.RE_SAT, 25),3),
+        np.round(np.nanpercentile(DF_CHIRPS.RE_SAT, 75) - np.nanpercentile(DF_CHIRPS.RE_SAT, 25),3),
+        np.round(np.nanpercentile(DF_ENSEMBLE_MEDIAN.RE_SAT, 75) - np.nanpercentile(DF_ENSEMBLE_MEDIAN.RE_SAT, 25),3)
+    ])
+
+    RSR_RAW_compare = pd.DataFrame({
+        "Dataset": labels,
+        "STD": RAW_std,
+        "Mean": RAW_mean,
+        "Median": RAW_median,
+        "DIFF":RAW_diff,
+        "IQR": RAW_IQ,
+        "CORR": RAW_corrs,
+        "MARE": RAW_mare,
+        "RMSE": RAW_rmse,
+        "NSE": RAW_nse,
+        "KGE": RAW_kge,
+    })
+
+    # ==================================================================================================================
+    ## DOWNSCALED METRICS FOR DAILY ANNUAL MAXIMA (QUANTILES)
+    DOWN_mare = np.array([
+                    np.round(calculate_mare(DF_IMERG.Mevd_OBS, DF_IMERG.Mevd_DOWN),3),
+                    np.round(calculate_mare(DF_CMORPH.Mevd_OBS, DF_CMORPH.Mevd_DOWN),3),
+                    np.round(calculate_mare(DF_MSWEP.Mevd_OBS, DF_MSWEP.Mevd_DOWN),3),
+                    np.round(calculate_mare(DF_ERA5.Mevd_OBS, DF_ERA5.Mevd_DOWN),3),
+                    np.round(calculate_mare(DF_GSMaP.Mevd_OBS, DF_GSMaP.Mevd_DOWN),3),
+                    np.round(calculate_mare(DF_CHIRPS.Mevd_OBS, DF_CHIRPS.Mevd_DOWN),3),
+                    np.round(calculate_mare(DF_ENSEMBLE_MEDIAN.Mevd_OBS, DF_ENSEMBLE_MEDIAN.Mevd_DOWN),3)
+                    ])
+
+    DOWN_rmse = np.array([
+                    np.round(calculate_rmse(DF_IMERG.Mevd_OBS, DF_IMERG.Mevd_DOWN),3),
+                    np.round(calculate_rmse(DF_CMORPH.Mevd_OBS, DF_CMORPH.Mevd_DOWN),3),
+                    np.round(calculate_rmse(DF_MSWEP.Mevd_OBS, DF_MSWEP.Mevd_DOWN),3),
+                    np.round(calculate_rmse(DF_ERA5.Mevd_OBS, DF_ERA5.Mevd_DOWN),3),
+                    np.round(calculate_rmse(DF_GSMaP.Mevd_OBS, DF_GSMaP.Mevd_DOWN),3),
+                    np.round(calculate_rmse(DF_CHIRPS.Mevd_OBS, DF_CHIRPS.Mevd_DOWN),3),
+                    np.round(calculate_rmse(DF_ENSEMBLE_MEDIAN.Mevd_OBS, DF_ENSEMBLE_MEDIAN.Mevd_DOWN),3)
+                    ])
+
+    DOWN_corrs = np.array([
+        np.round(DF_IMERG.Mevd_OBS.corr(DF_IMERG.Mevd_DOWN),3),
+        np.round(DF_CMORPH.Mevd_OBS.corr(DF_CMORPH.Mevd_DOWN),3),
+        np.round(DF_MSWEP.Mevd_OBS.corr(DF_MSWEP.Mevd_DOWN),3),
+        np.round(DF_ERA5.Mevd_OBS.corr(DF_ERA5.Mevd_DOWN),3),
+        np.round(DF_GSMaP.Mevd_OBS.corr(DF_GSMaP.Mevd_DOWN),3),
+        np.round(DF_CHIRPS.Mevd_OBS.corr(DF_CHIRPS.Mevd_DOWN),3),
+        np.round(DF_ENSEMBLE_MEDIAN.Mevd_OBS.corr(DF_ENSEMBLE_MEDIAN.Mevd_DOWN),3)
+    ])
+    
+    DOWN_nse = np.array([
+                np.round(calculate_nse(DF_IMERG.Mevd_OBS, DF_IMERG.Mevd_DOWN),3),
+                np.round(calculate_nse(DF_CMORPH.Mevd_OBS, DF_CMORPH.Mevd_DOWN),3),
+                np.round(calculate_nse(DF_MSWEP.Mevd_OBS, DF_MSWEP.Mevd_DOWN),3),
+                np.round(calculate_nse(DF_ERA5.Mevd_OBS, DF_ERA5.Mevd_DOWN),3),
+                np.round(calculate_nse(DF_GSMaP.Mevd_OBS, DF_GSMaP.Mevd_DOWN),3),
+                np.round(calculate_nse(DF_CHIRPS.Mevd_OBS, DF_CHIRPS.Mevd_DOWN),3),
+                np.round(calculate_nse(DF_ENSEMBLE_MEDIAN.Mevd_OBS, DF_ENSEMBLE_MEDIAN.Mevd_DOWN),3)
+                ])
+
+    DOWN_kge = np.array([
+                    np.round(calculate_kge(DF_IMERG.Mevd_OBS, DF_IMERG.Mevd_DOWN),3),
+                    np.round(calculate_kge(DF_CMORPH.Mevd_OBS, DF_CMORPH.Mevd_DOWN),3),
+                    np.round(calculate_kge(DF_MSWEP.Mevd_OBS, DF_MSWEP.Mevd_DOWN),3),
+                    np.round(calculate_kge(DF_ERA5.Mevd_OBS, DF_ERA5.Mevd_DOWN),3),
+                    np.round(calculate_kge(DF_GSMaP.Mevd_OBS, DF_GSMaP.Mevd_DOWN),3),
+                    np.round(calculate_kge(DF_CHIRPS.Mevd_OBS, DF_CHIRPS.Mevd_DOWN),3),
+                    np.round(calculate_kge(DF_ENSEMBLE_MEDIAN.Mevd_OBS, DF_ENSEMBLE_MEDIAN.Mevd_DOWN),3)
+                    ])
+
+    ## DOWNSCALED METRICS FOR RELATIVE ERRORS ANALYSIS
+    DOWN_std = np.array([
+                    np.round(np.std(DF_IMERG.RE_DOWN),3),
+                    np.round(np.std(DF_CMORPH.RE_DOWN),3), 
+                    np.round(np.std(DF_MSWEP.RE_DOWN),3),
+                    np.round(np.std(DF_ERA5.RE_DOWN),3), 
+                    np.round(np.std(DF_GSMaP.RE_DOWN),3),
+                    np.round(np.std(DF_CHIRPS.RE_DOWN),3),
+                    np.round(np.std(DF_ENSEMBLE_MEDIAN.RE_DOWN),3)
+                    ])
+
+    DOWN_mean = np.array([
+        np.round(np.nanmean(DF_IMERG.RE_DOWN),3),
+        np.round(np.nanmean(DF_CMORPH.RE_DOWN),3),
+        np.round(np.nanmean(DF_MSWEP.RE_DOWN),3),
+        np.round(np.nanmean(DF_ERA5.RE_DOWN),3),
+        np.round(np.nanmean(DF_GSMaP.RE_DOWN),3),
+        np.round(np.nanmean(DF_CHIRPS.RE_DOWN),3),
+        np.round(np.nanmean(DF_ENSEMBLE_MEDIAN.RE_DOWN),3)
+    ])
+
+    DOWN_median = np.array([
+        np.round(np.nanmedian(DF_IMERG.RE_DOWN),3),
+        np.round(np.nanmedian(DF_CMORPH.RE_DOWN),3),
+        np.round(np.nanmedian(DF_MSWEP.RE_DOWN),3),
+        np.round(np.nanmedian(DF_ERA5.RE_DOWN),3),
+        np.round(np.nanmedian(DF_GSMaP.RE_DOWN),3),
+        np.round(np.nanmedian(DF_CHIRPS.RE_DOWN),3),
+        np.round(np.nanmedian(DF_ENSEMBLE_MEDIAN.RE_DOWN),3)
+    ])
+
+    DOWN_diff = abs(DOWN_mean - DOWN_median)
+
+    DOWN_IQ = np.array([
+        np.round(np.nanpercentile(DF_IMERG.RE_DOWN, 75) - np.nanpercentile(DF_IMERG.RE_DOWN, 25),3),
+        np.round(np.nanpercentile(DF_CMORPH.RE_DOWN, 75) - np.nanpercentile(DF_CMORPH.RE_DOWN, 25),3),
+        np.round(np.nanpercentile(DF_MSWEP.RE_DOWN, 75) - np.nanpercentile(DF_MSWEP.RE_DOWN, 25),3),
+        np.round(np.nanpercentile(DF_ERA5.RE_DOWN, 75) - np.nanpercentile(DF_ERA5.RE_DOWN, 25),3),
+        np.round(np.nanpercentile(DF_GSMaP.RE_DOWN, 75) - np.nanpercentile(DF_GSMaP.RE_DOWN, 25),3),
+        np.round(np.nanpercentile(DF_CHIRPS.RE_DOWN, 75) - np.nanpercentile(DF_CHIRPS.RE_DOWN, 25),3),
+        np.round(np.nanpercentile(DF_ENSEMBLE_MEDIAN.RE_DOWN, 75) - np.nanpercentile(DF_ENSEMBLE_MEDIAN.RE_DOWN, 25),3)
+    ])
+
+    RSR_DOWN_compare = pd.DataFrame({
+        "Dataset": labels,
+        "STD": DOWN_std,
+        "Mean": DOWN_mean,
+        "Median": DOWN_median,
+        "DIFF":DOWN_diff,
+        "IQR": DOWN_IQ,
+        "CORR": DOWN_corrs,
+        "MARE": DOWN_mare,
+        "RMSE": DOWN_rmse,
+        "NSE": DOWN_nse,
+        "KGE": DOWN_kge,
+    })
+    
+    return RSR_RAW_compare, RSR_DOWN_compare
