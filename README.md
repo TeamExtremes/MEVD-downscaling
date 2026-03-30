@@ -54,7 +54,7 @@ The figure below presents an example of the bias-correction procedure applied to
 
 ## Zenodo Repository
 
-The results obtained for the satellite and reanalysis products, including outputs from GEV, MEVD, and MEVD-downscaling, are openly available and can be accessed from the following Zenodo repository: [https://zenodo.org/records/18885925](https://zenodo.org/records/18885925).
+The results obtained for the satellite and reanalysis products, including outputs from GEV, MEVD, and MEVD-downscaling for 50 years return time, are openly available and can be accessed from the following Zenodo repository: [https://zenodo.org/records/18885925](https://zenodo.org/records/18885925).
 
 ## References
 
