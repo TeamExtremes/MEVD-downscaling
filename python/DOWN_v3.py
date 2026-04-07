@@ -40,15 +40,11 @@ full_years = np.arange(yy_s, yy_e + 1)
 # =============================================================================
 Tr = np.array([5, 10, 20, 50, 100])
 
-# # Coast area 
-# lon_min, lon_max, lat_min, lat_max, area, toll = 12, 12.5, 45.2, 45.7, 'COAST', 0.05
-# # Fast area
-# lon_min, lon_max, lat_min, lat_max, area, toll = 11.5, 12, 45.5, 46, 'FAST', 0.05
-# # Test area
-# lon_min, lon_max, lat_min, lat_max, area, toll = 11, 12.5, 45, 46.5, 'TEST', 0.05
-# # Veneto area
+# PADOVA
+# lon_min, lon_max, lat_min, lat_max, area, toll = 11, 12.5, 45, 46.5, 'PADOVA', 0.05
+# VENETO
 lon_min, lon_max, lat_min, lat_max, area, toll = 10.5, 13.5, 44.5, 47, 'VENETO', 0.002
-# # Italy
+# ITALY
 # lon_min, lon_max, lat_min, lat_max, area, toll = 6.5, 19, 36.5, 48, 'ITALY', 0.002
 
 # =============================================================================
@@ -93,8 +89,6 @@ PRE_data = PRE_data.sel(lat=slice(lat_min-1.5, lat_max+1.5), lon=slice(lon_min-1
 lats = PRE_data['lat'].data
 lons = PRE_data['lon'].data
 
-lon2d, lat2d = np.meshgrid(lons, lats)
-
 nlon = np.size(lons)
 nlat = np.size(lats)
 ntime = len(PRE_data['time'])
@@ -104,31 +98,29 @@ year_vector = np.unique(pd.to_datetime(PRE_data['time']).year)
 PRE_data = PRE_data.where(PRE_data >= 0) 
 
 # =============================================================================
-if area == 'VENETO':
-    GEOMETRY = gpd.read_file(os.path.join('..','geometry','Veneto.geojson'))
+if area == 'PADOVA':
+    GEOMETRY = gpd.read_file(os.path.join('..','..', 'geometry','Padova.geojson'))
+elif area == 'VENETO':
+    GEOMETRY = gpd.read_file(os.path.join('..','..', 'geometry','Veneto.geojson'))
 elif area == 'ITALY':
-    GEOMETRY = gpd.read_file(os.path.join('..','geometry','Italy_simple.geojson'))
+    GEOMETRY = gpd.read_file(os.path.join('..','..', 'geometry','Italy_simple.geojson'))
 else:
     sys.exit("Area not recognized. Please choose 'VENETO' or 'ITALY'.")
 
-GEOMETRY_union = GEOMETRY.unary_union # ONLY FOR VENETO
-mask_veneto = sv.contains(GEOMETRY_union, lon2d, lat2d)
+GEOMETRY_union = GEOMETRY.unary_union
 
 # =============================================================================
 print(f'Extracting lat and lon points for {area} area')
 print()
 PRE_study = PRE_data.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
 
-# lat_ref = PRE_study.lat.values
-# lon_ref = PRE_study.lon.values
+lat_ref = PRE_study.lat.values
+lon_ref = PRE_study.lon.values
 
-lat_ref = lat2d[mask_veneto]
-lon_ref = lon2d[mask_veneto]
+lon2d, lat2d = np.meshgrid(lon_ref, lat_ref)
+mask_study = sv.contains(GEOMETRY_union, lon2d, lat2d)
 
-ndices_lat = np.where(np.isin(lats, lat_ref))[0]
-ndices_lon = np.where(np.isin(lons, lon_ref))[0]
-
-lon2d_ref, lat2d_ref = np.meshgrid(lon_ref, lat_ref)
+ndices_lat, ndices_lon = np.where(mask_study)
 
 del PRE_study
 
