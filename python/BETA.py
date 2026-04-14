@@ -17,6 +17,10 @@ from function import DOWN_raw
 from function import ART_downscale
 
 # =============================================================================
+# Example
+# python BETA.py -pr CHIRPS -np 2 -ys 2002 -ye 2023 -proc 25
+
+# =============================================================================
 parser = argparse.ArgumentParser()
 parser.add_argument("-pr", "--product", type=str, required=True)
 parser.add_argument("-np", "--npix", type=int, required=True)
