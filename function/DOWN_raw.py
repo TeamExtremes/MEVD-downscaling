@@ -53,6 +53,12 @@ def matplotlib_update_settings():
     plt.rcParams.update(params)
     return
 
+def wetfrac(array, thresh):
+    if len(array) == 0:
+        return np.nan
+    else:
+        return np.size(array[array > thresh])/np.size(array)
+
 def create_box_v2(DATA_INPUT, clat, clon, npix):
     '''
     Create a square box around a central point (clat, clon) with npix pixels.
