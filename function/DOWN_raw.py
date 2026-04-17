@@ -234,8 +234,7 @@ def compute_pwet_xr(xray, thresh, *,
             return np.size(array[array > thresh])/np.size(array)
 
     for it, st in enumerate(tscales):
-        datamat = xray.resample(time='{}h'.format(st)).sum(
-                                    dim='time', skipna = False)
+        datamat = xray.resample(time='{}h'.format(st)).sum(dim='time', skipna = False)
 
         for ix, sx in enumerate(xscales):
 
