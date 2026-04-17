@@ -33,7 +33,7 @@ where $Q_{est}$ represents the estimated extreme quantiles and $Q_{obs}$ corresp
 The figure below is part of the validation analysis and shows the scatter plot of 50 years extreme quantiles obtained from the satellite/reanalysis (RSR) products and Ensemble against the observed (OBS) quantiles. This comparison allows the assessment of the performance of the modelling and downscaling framework in reproducing observed extreme precipitation behavior.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/RE/downscaled/Products_DOWN_RE_scatter.png" alt="Seasonal_Climatology" />
+  <img src="https://raw.githubusercontent.com/TeamExtremes/MEVD-downscaling/refs/heads/main/figures/RE/downscaled/OLD/Products_DOWN_RE_scatter.png" alt="Seasonal_Climatology" />
 </div>
 
 ## Bias Correction
