@@ -348,7 +348,7 @@ def compute_pwet_xr_v2(box, dt, npix, thresh):
 
                 Swet_final.append(np.nanmean(Swet_fraction))
 
-    WET_MATRIX = np.reshape(Swet_final,(len(tscales),npix))
+    WET_MATRIX = np.reshape(Swet_final, (len(tscales), len(xscales)))
     
     return WET_MATRIX, xscales, tscales
 
