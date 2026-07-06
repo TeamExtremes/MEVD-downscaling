@@ -379,6 +379,63 @@ def down_wei_beta_alpha_update(Ns, Cs, Ws, beta, gam):
 
     return Nd, Cd, Wd
 
+def down_wei_beta_alpha_update_v2(Ns, Cs, Ws, beta, gam):
+    '''
+    The difference with down_wei_beta_alpha is the use of try-except for errors,
+    In the case solve dont found the solution, we use the original Ws value.
+    In this version (v2) we change the start point of w parameter from 0.1 to Ws
+    '''
+    Ns = np.asarray(Ns)  # check if scalar input - should be the same for N,C,W
+    Cs = np.asarray(Cs)
+    Ws = np.asarray(Ws)
+    # the three parameter mush have same shape - I only check one here
+    is_scalar = False if Cs.ndim > 0 else True
+    Ns.shape = (1,) * (1 - Ns.ndim) + Ns.shape
+    Cs.shape = (1,) * (1 - Cs.ndim) + Cs.shape
+    Ws.shape = (1,) * (1 - Ws.ndim) + Ws.shape
+    m = Cs.shape[0]  # length of parameter arrays = number of blocks=
+
+    # prob wet:: correct satellite N adding the average difference
+    pws = np.mean(Ns) / 365.25
+    Wd = np.zeros(m)
+    Cd = np.zeros(m)
+    Nd = np.zeros(m)
+    for ii in range(m):
+        cs = Cs[ii]
+        ws = Ws[ii]
+        rhs = (1/(gam*beta)) * (((2*ws*gamma(2 / ws))/((gamma(1/ws))**2)) + (gam-1)*pws)
+        wpfun = lambda w: (2*w*gamma(2 / w)/(gamma(1/w))**2) - rhs
+
+        try:
+            res = fsolve(wpfun, np.nanmean(Ws), full_output=True, xtol=1e-06, maxfev=10000)
+            Wd[ii] =  res[0][0]
+            info = res[1]
+            fval = info['fvec']
+            
+            if np.abs(fval) > 1e-5:
+                raise ValueError("Fsolve no convergió adecuadamente")
+
+        except (RuntimeError, ValueError) as e:
+            print(f"Warning: Problema en fsolve para ii={ii}. Se usará un valor por defecto.")
+            Wd[ii] = ws  # Usa ws como aproximación
+        
+        info = res[1]
+        fval = info['fvec']
+        if fval > 1e-5:
+            print('warning - downscaling function:: '
+                    'there is something wrong solving fsolve!')
+            # print(Cs[ii], Ws[ii], beta, gam)
+        Cd[ii] = (beta * Wd[ii]) * (cs / ws) * (gamma(1 / ws) / gamma(1 / Wd[ii]))
+        Nd[ii] = int( np.rint( Ns[ii] / beta))
+
+    # If Nd, Cd, Wd are a collection (example, list or array) and not a scalar, 
+    # return all collection.
+    Nd = Nd if not is_scalar else Nd[0]
+    Cd = Cd if not is_scalar else Cd[0]
+    Wd = Wd if not is_scalar else Wd[0]
+
+    return Nd, Cd, Wd
+
 def mev_fun(y, pr, N, C, W):
     ''' MEV distribution function, to minimize numerically
     for computing quantiles
@@ -697,7 +754,7 @@ def fit_yearly_weibull_update(xdata, thresh, maxmiss=36):
             elif Ni == 1:
                 NCW[i,:] = np.array([np.nan, np.nan, np.nan, yy])
             else:
-                NCW[i,0:3] = wei_fit_update(excesses)
+                # NCW[i,0:3] = wei_fit_update(excesses)
                 NCW[i,0:3] = wei_fit(excesses)
                 NCW[i,3] = yy
 
