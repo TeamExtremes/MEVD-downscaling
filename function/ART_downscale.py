@@ -2,9 +2,346 @@ import scipy
 import numpy as np
 import xarray as xr
 import scipy.optimize
+import matplotlib.pyplot as plt
 from scipy.special import gamma
 from scipy.integrate import dblquad, nquad
 from scipy.optimize import curve_fit, minimize, fsolve
+from scipy.interpolate import interp1d
+from scipy.interpolate import RBFInterpolator
+
+def interpolate_subdaily_wet_matrix(
+        WET_MATRIX,
+        tscales,
+        xscales,
+        new_tscales=(3,6,12),
+        kind="cubic"):
+    """
+    Interpolate WET_MATRIX to generate artificial sub-daily
+    wet fractions (e.g. 3, 6, 12 h).
+
+    Parameters
+    ----------
+    WET_MATRIX : ndarray
+        shape = (ntime, nspace)
+
+    tscales : array-like
+        Existing temporal scales (hours)
+
+    xscales : array-like
+        Spatial scales
+
+    new_tscales : iterable
+        Temporal scales to be inserted
+
+    kind : str
+        'linear', 'quadratic' or 'cubic'
+
+    Returns
+    -------
+    WET_MATRIX_NEW
+    tscales_new
+    xscales
+    """
+
+    tscales = np.asarray(tscales)
+    xscales = np.asarray(xscales)
+
+    ###########################################################
+    # New temporal vector
+    ###########################################################
+
+    t_all = np.sort(
+        np.concatenate([tscales, new_tscales])
+    )
+
+    WNEW = np.zeros((len(t_all), len(xscales)))
+
+    ###########################################################
+    # Interpolate each spatial scale independently
+    ###########################################################
+
+    for j in range(len(xscales)):
+
+        valid = np.isfinite(WET_MATRIX[:,j])
+
+        # Si hay menos de 2 puntos válidos no se puede interpolar
+        if valid.sum() < 2:
+            WNEW[:,j] = np.nan
+            continue
+
+        # Con menos de 4 puntos no puede hacerse una cúbica
+        kind_use = kind
+        if kind == "cubic" and valid.sum() < 4:
+            kind_use = "linear"
+
+        f = interp1d(
+            tscales[valid],
+            WET_MATRIX[valid,j],
+            kind=kind_use,
+            fill_value="extrapolate"
+        )
+
+        WNEW[:,j] = f(t_all)
+    ###########################################################
+    # Physical limits
+    ###########################################################
+
+    WNEW = np.clip(WNEW,0,1)
+
+    return WNEW, t_all, xscales
+
+def wet_matrix_extrapolation(WET_MATRIX, spatial_scale, temporal_scale, L1, npix):
+    # Create a grid of points for the original data
+    original_points = np.array(np.meshgrid(temporal_scale, spatial_scale)).T.reshape(-1, 2)
+    wet_fraction_values = WET_MATRIX.ravel()
+
+    # Use RBFInterpolator for cubic extrapolation
+    interpolator = RBFInterpolator(original_points, wet_fraction_values, kernel='cubic')
+
+    # New spatial scale with 100 values from 0 to L1 km 
+    new_spatial_scale = np.linspace(0, (2*npix+1)*L1, 100)
+
+    # Create new grid for extrapolated data
+    new_spatial, new_temporal = np.meshgrid(new_spatial_scale, temporal_scale)
+
+    # Combine the spatial and temporal scales for interpolation
+    points_to_interpolate = np.array([new_temporal.ravel(), new_spatial.ravel()]).T
+
+    # Get the interpolated values (including extrapolated values)
+    WET_MATRIX_EXTRA = interpolator(points_to_interpolate).reshape(new_temporal.shape)
+    
+    return WET_MATRIX_EXTRA, new_spatial_scale
+
+def get_isoline_time(pwet_column, t_dense, pw):
+    """
+    Returns the exact time where the wet fraction equals 'pw'
+    using inverse interpolation.
+
+    Parameters
+    ----------
+    pwet_column : 1D array
+        Wet fraction values for one spatial scale.
+
+    t_dense : 1D array
+        Interpolated time vector.
+
+    pw : float
+        Wet fraction defining the isoline.
+
+    Returns
+    -------
+    float
+        Time corresponding to pw.
+        Returns np.nan if pw is outside the range.
+    """
+
+    # remove repeated values
+    pw_unique, idx = np.unique(pwet_column, return_index=True)
+    t_unique = t_dense[idx]
+
+    if len(pw_unique) < 2:
+        return np.nan
+
+    if pw < pw_unique.min() or pw > pw_unique.max():
+        return np.nan
+
+    f = interp1d(
+        pw_unique,
+        t_unique,
+        kind="linear",
+        bounds_error=False,
+        fill_value=np.nan
+    )
+
+    return float(f(pw))
+
+def Taylor_beta_general(
+        pwets,
+        xscales,
+        tscales,
+        *,
+        L1=10,
+        target_x=0.001,
+        target_t=24,
+        origin_x=10,
+        origin_t=24,
+        ninterp_t=1000,
+        ninterp_x=200,
+        fit_neighbors=3,
+        plot=False):
+
+    ############################################################
+    # Convert spatial scales
+    ############################################################
+
+    xkm = np.asarray(xscales) * L1
+    tscales = np.asarray(tscales)
+
+    ############################################################
+    # Dense interpolation in time
+    ############################################################
+
+    t_dense = np.linspace(tscales.min(),tscales.max(),ninterp_t)
+
+    pw_time = np.zeros((ninterp_t, len(xkm)))
+
+    for j in range(len(xkm)):
+        pw_time[:, j] = np.interp(t_dense,tscales,pwets[:, j])
+
+    ############################################################
+    # Dense interpolation in space
+    ############################################################
+
+    x_dense = np.linspace(xkm.min(),xkm.max(),ninterp_x)
+
+    pw_dense = np.zeros((ninterp_t, ninterp_x))
+
+    for i in range(ninterp_t):
+
+        f = interp1d(xkm,pw_time[i],kind="linear",fill_value="extrapolate")
+
+        pw_dense[i] = f(x_dense)
+
+    ############################################################
+    # Position of origin
+    ############################################################
+
+    pos0 = np.argmin(np.abs(x_dense-origin_x))
+
+    left = max(0, pos0-fit_neighbors)
+    right = min(ninterp_x, pos0+fit_neighbors+1)
+
+    x_local = x_dense[left:right]
+
+    ############################################################
+    # Wet fraction range
+    ############################################################
+
+    mypw = np.linspace(
+        np.nanmin(pw_dense),
+        np.nanmax(pw_dense),
+        ninterp_t
+    )
+
+    slopes = []
+    intercepts = []
+    pw_keep = []
+
+    best_x = None
+    best_t = None
+
+    ############################################################
+    # Loop over isolines
+    ############################################################
+
+    for pw in mypw:
+
+        t_local = []
+
+        valid = True
+
+        for xx in x_local:
+
+            ix = np.argmin(np.abs(x_dense-xx))
+            tt = get_isoline_time(pw_dense[:, ix],t_dense,pw)
+
+            if np.isnan(tt):
+                valid = False
+                break
+
+            t_local.append(tt)
+
+        if not valid:
+            continue
+
+        t_local = np.asarray(t_local)
+
+        coef = np.polyfit(t_local,x_local,1)
+
+        slopes.append(coef[0])
+        intercepts.append(coef[1])
+        pw_keep.append(pw)
+
+    slopes = np.asarray(slopes)
+    intercepts = np.asarray(intercepts)
+    pw_keep = np.asarray(pw_keep)
+
+    ############################################################
+    # Find best isoline
+    ############################################################
+
+    t_hat = (target_x-intercepts)/slopes
+
+    idx_best = np.argmin(np.abs(t_hat-target_t))
+
+    ############################################################
+    # Recover local points used
+    ############################################################
+
+    t_best = []
+
+    for xx in x_local:
+
+        ix = np.argmin(np.abs(x_dense-xx))
+        idx = np.argmin(np.abs(pw_dense[:, ix]-pw_keep[idx_best]))
+
+        t_best.append(t_dense[idx])
+
+    t_best = np.asarray(t_best)
+
+    ############################################################
+    # Origin wet fraction
+    ############################################################
+
+    ix = np.argmin(np.abs(x_dense-origin_x))
+    it = np.argmin(np.abs(t_dense-origin_t))
+
+    pw_origin = pw_dense[it, ix]
+
+    beta = pw_origin / pw_keep[idx_best]
+
+    ############################################################
+    # Output
+    ############################################################
+
+    res = {}
+
+    res["beta"] = beta
+    res["pwet_origin"] = pw_origin
+    res["pwet_target"] = pw_keep[idx_best]
+    res["slope"] = slopes[idx_best]
+    res["intercept"] = intercepts[idx_best]
+    res["t_hat"] = t_hat[idx_best]
+
+    ############################################################
+    # Plot
+    ############################################################
+
+    if plot:
+
+        fig = plt.figure(figsize=(8,6))
+
+        PS = plt.contourf(x_dense,t_dense,pw_dense,levels=20,cmap="viridis")
+
+        plt.colorbar(PS,label=r"$p_r$")
+        plt.plot(x_local,t_best,'or',label="Local fit points")
+
+        xx = np.linspace(target_x,x_local.max()+5,100)
+        tt = (xx-intercepts[idx_best])/slopes[idx_best]
+
+        plt.plot(xx,tt,'-b',lw=2,label="Local Taylor fit")
+        plt.plot(origin_x,origin_t,'^r',ms=10,label="Origin")
+        plt.plot(target_x,target_t,'sr',ms=8,label="Target")
+
+        plt.xlabel("Spatial scale [km]")
+        plt.ylabel("Temporal scale [hours]")
+        plt.legend()
+        plt.tight_layout()
+        plt.close(fig)
+
+        res["contour"] = fig
+
+    return res
 
 def Quantile_manual_general(Tr, N, C, W):
     """

@@ -289,7 +289,7 @@ def compute_pwet_xr(xray, thresh, *,
     return pwets, xscales, tscales
 
 
-def compute_pwet_xr_v2(box, dt, npix, thresh):
+def compute_pwet_xr_v2(box, dt, thresh):
     tmax = 48
     smax = box.shape[0] # max spatial scale
     tscales = np.array([1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 36, 48, 96])*dt
@@ -352,6 +352,139 @@ def compute_pwet_xr_v2(box, dt, npix, thresh):
     
     return WET_MATRIX, xscales, tscales
 
+def compute_pwet_xr_v3(box, tscales, thresh):
+    """
+    Compute wet fraction matrix for arbitrary temporal scales.
+
+    Parameters
+    ----------
+    box : xarray.DataArray
+        Rainfall cube (lon, lat, time)
+
+    tscales : array-like
+        Temporal aggregation scales (hours).
+        Example:
+            3-hourly products : [3,6,9,12,15,18,24,30,36,48]
+            Daily products    : [24,48,72,96,120,144,168]
+
+    thresh : float
+        Wet-day threshold (mm).
+
+    Returns
+    -------
+    WET_MATRIX : ndarray
+        Wet fraction matrix (time scale × spatial scale)
+
+    xscales : ndarray
+        Spatial scales (pixels)
+
+    tscales : ndarray
+        Temporal scales (hours)
+    """
+
+    tscales = np.asarray(tscales)
+
+    smax = box.shape[0]
+    xscales = np.arange(1, smax + 1)
+
+    ntscales = len(tscales)
+    nsscales = len(xscales)
+
+    pwets = np.zeros((ntscales, nsscales))
+
+    nlon = len(box.lon)
+    nlat = len(box.lat)
+
+    Swet_final = []
+
+    for st in tscales:
+
+        input_data = box.resample(time=f"{int(st)}h").sum(dim="time", skipna=False)
+
+        for sx in xscales:
+
+            ####################################################
+            # 1 pixel
+            ####################################################
+
+            if sx == 1:
+
+                wet_tmp = np.zeros((nlon, nlat))
+
+                for i in range(nlon):
+                    for j in range(nlat):
+
+                        wet_tmp[i, j] = wetfrac(
+                            input_data[i, j, :].data,
+                            thresh
+                        )
+
+                Swet_final.append(np.nanmean(wet_tmp))
+
+            ####################################################
+            # Maximum spatial scale
+            ####################################################
+
+            elif sx == smax:
+
+                rainfall_tmp = input_data.mean(axis=(0, 1))
+
+                wet_tmp = wetfrac(
+                    rainfall_tmp,
+                    thresh
+                )
+
+                Swet_final.append(np.nanmean(wet_tmp))
+
+            ####################################################
+            # Intermediate spatial scales
+            ####################################################
+
+            else:
+
+                Swet_fraction = []
+
+                for i in range(nlon):
+
+                    for j in range(nlat):
+
+                        box_tmp = input_data[
+                            i:i+sx,
+                            j:j+sx,
+                            :
+                        ]
+
+                        if (
+                            box_tmp.shape[0] == sx
+                            and
+                            box_tmp.shape[1] == sx
+                        ):
+
+                            rainfall_tmp = np.nanmean(
+                                box_tmp.data,
+                                axis=(0,1)
+                            )
+
+                            wet_tmp = wetfrac(
+                                rainfall_tmp,
+                                thresh
+                            )
+
+                            Swet_fraction.append(
+                                wet_tmp
+                            )
+
+                Swet_final.append(
+                    np.nanmean(Swet_fraction)
+                )
+
+    WET_MATRIX = np.reshape(
+        Swet_final,
+        (len(tscales), len(xscales))
+    )
+
+    return WET_MATRIX, xscales, tscales
+
 def Taylor_beta(pwets, xscales, tscales, *, L1=10, target_x=0.001, target_t=24,
                     origin_x=10, origin_t=3, ninterp = 1000, plot=False):
     '''------------------------------------------------------------------
@@ -408,7 +541,8 @@ def Taylor_beta(pwets, xscales, tscales, *, L1=10, target_x=0.001, target_t=24,
             # tvec[ii,jj] = tscales_int[myindices[ii,jj]]
             Tvec[jj] = tscales_int[myindices[ii,jj]]
         # warnings.simplefilter('ignore', np.RankWarning)
-        res = np.polyfit(Tvec[:2], xscales_km[:2], 1)
+        # res = np.polyfit(Tvec[:2], xscales_km[:2], 1)
+        res = np.polyfit(Tvec[:4], xscales_km[:4], 1) #ART update for fit the slope, now we use 4 scales
         myU[ii] = res[0]
         myX0[ii] = res[1]
 

@@ -16,9 +16,11 @@ sys.path.append(os.path.abspath(".."))
 from function import DOWN_raw
 from function import ART_downscale
 
+os.system("cls" if os.name == "nt" else "clear")
+
 # =============================================================================
 # Example
-# python BETA.py -pr CHIRPS -np 2 -ys 2002 -ye 2023 -proc 25
+# python BETA.py -pr IMERG -np 2 -ys 2002 -ye 2023 -proc 25
 
 # =============================================================================
 parser = argparse.ArgumentParser()
@@ -61,36 +63,52 @@ GEOMETRY_union = GEOMETRY.unary_union
 
 # =============================================================================
 if product == 'IMERG':
-    time_reso = '3h'
     filename = 'IMERG_Italy_3h_2001_01_01_2023_12_31.nc'
+    L1, dt, time_reso = 10, 3, '3h'
+    origin_x_t = [10, 24]
+    target_x_t = [0.001, 24]
 
 elif product == 'CMORPH':
-    time_reso = '3h'
     filename = 'CMORPH_Italy_3hr_1998_01_01_2023_12_31.nc'
+    L1, dt, time_reso = 25, 3, '3h'
+    origin_x_t = [25, 24]
+    target_x_t = [0.001, 24]
 
 elif product == 'MSWEP':
-    time_reso = '3h'
     filename = 'MSWEP_Italy_3h_1980_01_01_2023_12_31.nc'
+    L1, dt, time_reso = 10, 3, '3h'
+    origin_x_t = [10, 24]
+    target_x_t = [0.001, 24]
 
 elif product == 'ERA5':
-    time_reso = '3h'
     filename = 'ERA5_Italy_3h_2000_01_01_2023_12_31.nc'
+    L1, dt, time_reso = 25, 3, '3h'
+    origin_x_t = [25, 24]
+    target_x_t = [0.001, 24]
 
 elif product == 'GSMaP':
-    time_reso = '3h'
     filename = 'GSMaP_Italy_3h_2002_01_01_2024_12_31.nc'
+    L1, dt, time_reso = 10, 3, '3h'
+    origin_x_t = [10, 24]
+    target_x_t = [0.001, 24]
 
 elif product == 'CHIRPS':
-    time_reso = '1dy'
     filename = 'CHIRPS_Italy_1dy_1981_01_01_2024_06_30.nc'
+    L1, dt, time_reso = 5, 24, '1dy'
+    origin_x_t = [5, 24]
+    target_x_t = [0.001, 24]
 
 else:
     sys.exit('Product not found')
 
+print()
+print(f'Product: {product}')
+print(f'xscale : {origin_x_t[0]} km to {target_x_t[0]} km')
+print(f'tscale : {origin_x_t[1]} hr to {target_x_t[1]} hr')
+
 # =============================================================================
 dir_base = os.path.join('/','media','arturo','T9','Data','Italy','Satellite')
 
-print(f'Product: {product}')
 dir_input = os.path.join(dir_base,product,time_reso,filename)
 DATA = xr.open_dataset(dir_input)
 DATA = DATA.sel(time=DATA.time.dt.year.isin(np.arange(yy_s,yy_e+1)))
@@ -106,58 +124,70 @@ mask_study = sv.contains(GEOMETRY_union, lon2d, lat2d)
 indices_lat, indices_lon = np.where(mask_study)
 
 # =============================================================================
-if product == 'IMERG':
-    origin = [10, 3]
-    target = [0, 24]
-
-elif product == 'CMORPH':
-    origin = [25, 3]
-    target = [0, 24]
-
-elif product == 'MSWEP':
-    origin = [10, 3]
-    target = [0, 24]
-
-elif product == 'ERA5':
-    origin = [25, 3]
-    target = [0, 24]
-
-elif product == 'GSMaP':
-    origin = [10, 3]
-    target = [0, 24]
-
-elif product == 'CHIRPS':
-    origin = [5, 24]
-    target = [0, 24]
-
-print(f'Product: {product}')
-print(f'xscale : {origin[0]} km to {target[0]} km')
-print(f'tscale : {origin[1]} hr to {target[1]} hr')
-
-# =============================================================================
 PRE_data_T = DATA.transpose('lon', 'lat', 'time')
 time_vector_dt = pd.to_datetime(PRE_data_T['PRE']['time'].values)
 DATA_3h = xr.DataArray(PRE_data_T['PRE'],  
                         coords={
-                            'lon':PRE_data_T['lon'].values, 
-                            'lat':PRE_data_T['lat'].values, 
+                            'lon': PRE_data_T['lon'].values, 
+                            'lat': PRE_data_T['lat'].values, 
                             'time':time_vector_dt},
                         dims=('lon', 'lat', 'time'))
 
 # =============================================================================
 def compute_for_point(args):
-    DATA_3h, la, lo = args
+    (
+        DATA_3h,
+        la,
+        lo,
+        dt,
+        npix,
+        L1,
+        origin_x_t,
+        target_x_t,
+    ) = args
+
     lat_c = lats[la]
     lon_c = lons[lo]
-    box_3h = DOWN_raw.create_box_v2(DATA_3h, lat_c, lon_c, npix)
-    pwets, xscales, tscales = DOWN_raw.compute_pwet_xr(box_3h, 1, cube1size=npix, dt=24, tmax=24*6)  
-    beta_ = ART_downscale.compute_beta(pwets, origin, target, xscales, tscales)
+
+    BOX = DOWN_raw.create_box_v2(DATA_3h, lat_c, lon_c, npix)
+    
+    if np.isnan(BOX).all():
+        return la, lo, np.nan
+
+    pwets, xscales, tscales = DOWN_raw.compute_pwet_xr_v2(BOX, dt, 1)
+
+    if product == 'CHIRPS':
+        pwets, tscales, xscales = ART_downscale.interpolate_subdaily_wet_matrix(
+                                                                                pwets,
+                                                                                tscales,
+                                                                                xscales,
+                                                                                new_tscales=(3,6,12,15),
+                                                                                kind="cubic")
+
+    beta_info = ART_downscale.Taylor_beta_general(pwets,xscales,tscales,L1=L1,
+                                                    origin_x=origin_x_t[0],origin_t=origin_x_t[1],
+                                                    target_x=target_x_t[0],target_t=target_x_t[1],
+                                                    ninterp_t=1000,ninterp_x=200,
+                                                    fit_neighbors=2,plot=True)
+
+    beta_ = beta_info['beta']
+    # if beta_ < 1 or beta_ > 1.2:
+    #     print(f"  {la:02d} {lo:02d} "f"{lon_c:.2f} {lat_c:.2f} "f"{beta_:.6f}")
+
     return la, lo, beta_
 
 tasks = (
-    (DATA_3h, la, lo)
-    for la, lo in zip(indices_lat, indices_lon)
-)
+    (
+        DATA_3h,
+        la,
+        lo,
+        dt,
+        npix,
+        L1,
+        origin_x_t,
+        target_x_t,
+    )
+    for la, lo in zip(indices_lat, indices_lon))
 
 with Pool(processes=nproc) as pool:
     results = list(pool.imap(compute_for_point, tasks, chunksize=1))
@@ -167,16 +197,17 @@ for la, lo, beta_ in results:
     BETA[la, lo] = beta_
 
 # =============================================================================
+print()
 BETA_xr = xr.Dataset(data_vars={
-                    "BETA": (("lat","lon"), BETA),
-                    },
-    coords={'lat': lats, 'lon': lons},
-    attrs=dict(description=f"Beta for '{product}' in the '{area}' area bounded by longitudes {lon_min} to {lon_max} and box size '{NEIBHR}x{NEIBHR}'."))
+                "BETA": (("lat","lon"), BETA),},
+                coords={'lat': lats, 'lon': lons},
+                attrs=dict(description=f"Beta for '{product}' in the '{area}' area bounded by longitudes {lon_min} to {lon_max} and box size '{NEIBHR}x{NEIBHR}'."))
 
 BETA_xr.BETA.attrs["units"] = "dimensionless"
 BETA_xr.BETA.attrs["long_name"] = "Itermittency function between two generic scales"
 BETA_xr.BETA.attrs["origname"] = "Beta"
 
-DOWN_out = os.path.join('..','output','Beta','old',f'{area}_Beta_{product}_{time_reso}_{yy_s}_{yy_e}_npix_{npix}.nc')
+DOWN_out = os.path.join('..','output','Beta',f'{area}_Beta_{product}_{time_reso}_{yy_s}_{yy_e}_npix_{npix}.nc')
 print(f'Export Data to {DOWN_out}')
 BETA_xr.to_netcdf(DOWN_out)
+print()
