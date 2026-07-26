@@ -792,43 +792,126 @@ def grid_corr(xdata, plot=True, thresh=0, cor_method='pearson'):
     return res
 
 
-def nabla_2d(par_acf, myacf, T1, T2, err_min = 1e-2):
-    '''########################################################################
-    Compute the variance function as in Vanmarcke's book.
-    INPUTS::
-        par_acf = tuple with the parameters of the autocorr function (ACF)
-        myacf = ACF in 1,2,or 3 dimensions, with parameters in par_acf
-        T1 = 1st dimension of averaging area
-        T2 = 2nd dim of the averaging area'''
-    if (T1 == 0) or (T2 == 0):
-        print('integration domain is zero')
-        return 0.0 # integral is zero in this case.
-    else:
-        fun_XY = lambda x ,y: (T1 - x ) *(T2 - y ) *myacf(x ,y, par_acf)
-        myint, myerr = nquad(fun_XY, [[0. ,T1], [0. ,T2]])
-        # if myint != 0.0:
-        #     rel_err = myerr /myint
-        # else:
-        #     rel_err = 0
-        # if rel_err > err_min:
-        #     print('varfun ERROR --> Numeric Integration scheme does not converge')
-        #     print('int rel error = ', rel_err)
-        #     sys.exit("aargh! there are errors!") # to stop code execution
-        return 4.0 * myint
+# def nabla_2d(par_acf, myacf, T1, T2, err_min = 1e-2):
+#     '''########################################################################
+#     Compute the variance function as in Vanmarcke's book.
+#     INPUTS::
+#         par_acf = tuple with the parameters of the autocorr function (ACF)
+#         myacf = ACF in 1,2,or 3 dimensions, with parameters in par_acf
+#         T1 = 1st dimension of averaging area
+#         T2 = 2nd dim of the averaging area'''
+#     if (T1 == 0) or (T2 == 0):
+#         print('integration domain is zero')
+#         return 0.0 # integral is zero in this case.
+#     else:
+#         fun_XY = lambda x ,y: (T1 - x ) *(T2 - y ) *myacf(x ,y, par_acf)
+#         myint, myerr = nquad(fun_XY, [[0. ,T1], [0. ,T2]])
+#         # if myint != 0.0:
+#         #     rel_err = myerr /myint
+#         # else:
+#         #     rel_err = 0
+#         # if rel_err > err_min:
+#         #     print('varfun ERROR --> Numeric Integration scheme does not converge')
+#         #     print('int rel error = ', rel_err)
+#         #     sys.exit("aargh! there are errors!") # to stop code execution
+#         return 4.0 * myint
 
+# def fast_corla_2d(par_acf, myacf, Tx, L, err_min=1e-2):
+#     nab_1 = nabla_2d(par_acf, myacf, L, Tx[0], err_min=err_min)
+#     nab_2 = nabla_2d(par_acf, myacf, L, Tx[1], err_min=err_min)
+#     nab_3 = nabla_2d(par_acf, myacf, L, Tx[2], err_min=err_min)
+#     nab_den = nabla_2d(par_acf, myacf, L, L, err_min=err_min)
+#     if np.abs(nab_den) < 10e-6: # to avoid infinities
+#         # print('correcting - inf value')
+#         nab_den = 10e-6
+#     covla = 2*(nab_1 -2*nab_2 + nab_3)/(4*nab_den)
+#     # print('parhat =', par_acf)
+#     return covla
+
+def nabla_2d(par_acf, myacf, T1, T2, err_min=1e-2):
+    """
+    Compute Vanmarcke's variance function.
+
+    Parameters
+    ----------
+    par_acf : tuple
+        Parameters of the point ACF.
+    myacf : callable
+        Point autocorrelation function.
+    T1, T2 : float
+        Averaging dimensions (km).
+    err_min : float
+        Maximum acceptable relative integration error.
+
+    Returns
+    -------
+    float
+        Vanmarcke's variance function.
+    """
+
+    if T1 <= 0 or T2 <= 0:
+        return 0.0
+
+    integrand = lambda x, y: (T1 - x) * (T2 - y) * myacf(x, y, par_acf)
+
+    integral, error = nquad(
+        integrand,
+        [[0.0, T1], [0.0, T2]],
+        opts={
+            "epsabs": 1e-6,
+            "epsrel": 1e-6
+        }
+    )
+
+    if integral != 0.0:
+
+        rel_error = abs(error / integral)
+
+        if rel_error > err_min:
+            warnings.warn(
+                f"High relative integration error ({rel_error:.2e}) "
+                f"for T1={T1:.2f}, T2={T2:.2f}"
+            )
+
+    return 4.0 * integral
 
 def fast_corla_2d(par_acf, myacf, Tx, L, err_min=1e-2):
+    """
+    Compute the areal correlation between two L×L blocks separated by
+    a distance defined through Tx.
+
+    Parameters
+    ----------
+    par_acf : tuple
+        Parameters of the point ACF.
+    myacf : callable
+        Point autocorrelation function.
+    Tx : array-like
+        Integration distances [|L-d|, d, L+d, d].
+    L : float
+        Grid-cell size (km).
+    err_min : float
+        Relative integration error threshold for warning messages.
+
+    Returns
+    -------
+    covla : float
+        Correlation between spatially averaged fields.
+    """
+
     nab_1 = nabla_2d(par_acf, myacf, L, Tx[0], err_min=err_min)
     nab_2 = nabla_2d(par_acf, myacf, L, Tx[1], err_min=err_min)
     nab_3 = nabla_2d(par_acf, myacf, L, Tx[2], err_min=err_min)
-    nab_den = nabla_2d(par_acf, myacf, L, L, err_min=err_min)
-    if np.abs(nab_den) < 10e-6: # to avoid infinities
-        # print('correcting - inf value')
-        nab_den = 10e-6
-    covla = 2*(nab_1 -2*nab_2 + nab_3)/(4*nab_den)
-    # print('parhat =', par_acf)
-    return covla
 
+    nab_den = nabla_2d(par_acf, myacf, L, L, err_min=err_min)
+
+    # Prevent division by zero
+    if np.abs(nab_den) < 1e-6:
+        nab_den = 1e-6
+
+    covla = (nab_1 - 2.0 * nab_2 + nab_3) / (2.0 * nab_den)
+
+    return covla
 
 def myfun_sse(xx, yobs, parhat, L, acf = 'mar'):
     xx = np.asarray(xx)
@@ -888,6 +971,19 @@ def bin_ave_corr(vdist, vcorr, toll=0.3, plot=False):
         res['fig'] = fig
     return res
 
+def int_corr(xx, parhat, acf, L):
+    '''------------------------------------------------------------------------
+    compute correlation of Local averages
+    (inverse than the down_corr function)
+    ------------------------------------------------------------------------'''
+    m = np.size(xx)
+    corrL = np.zeros(m)
+    for i in range(m):
+        Tx = np.array([np.abs(L - xx[i]), xx[i], L + xx[i], xx[i]])
+        myacf = lambda x, y, parhat: myacf_2d(x, y, parhat, acf=acf)
+        corrL[i] = fast_corla_2d(parhat, myacf, Tx, L, err_min=1e-2)
+    return corrL
+
 def down_corr(vdist, vcorr, L1, *, acf='mar',
                 use_ave=True, opt_method = 'genetic', disp=False, toll=0.005,
                 plot=False):
@@ -933,8 +1029,7 @@ def down_corr(vdist, vcorr, L1, *, acf='mar',
 
     elif opt_method == 'genetic':
         bounds = [(0.0, 200.0),(0.0, 1.00)]
-        resmin = differential_evolution(myfun, bounds, disp=False,
-                                            tol = toll, atol = toll)
+        resmin = differential_evolution(myfun, bounds, disp=False,tol = toll, atol = toll, seed=42)
         res[parnames[0]] = resmin.x[0]
         res[parnames[1]] = resmin.x[1]
         res['success'] = resmin.success
@@ -969,20 +1064,6 @@ def down_corr(vdist, vcorr, L1, *, acf='mar',
         plt.close()
         res['fig'] = fig
     return res
-
-
-def int_corr(xx, parhat, acf, L):
-    '''------------------------------------------------------------------------
-    compute correlation of Local averages
-    (inverse than the down_corr function)
-    ------------------------------------------------------------------------'''
-    m = np.size(xx)
-    corrL = np.zeros(m)
-    for i in range(m):
-        Tx = np.array([np.abs(L - xx[i]), xx[i], L + xx[i], xx[i]])
-        myacf = lambda x, y, parhat: myacf_2d(x, y, parhat, acf=acf)
-        corrL[i] = fast_corla_2d(parhat, myacf, Tx, L, err_min=1e-2)
-    return corrL
 
 
 def vrf(L, L0, par_acf, acf='mar'):

@@ -168,7 +168,7 @@ def compute_for_point(args):
                                                     origin_x=origin_x_t[0],origin_t=origin_x_t[1],
                                                     target_x=target_x_t[0],target_t=target_x_t[1],
                                                     ninterp_t=1000,ninterp_x=200,
-                                                    fit_neighbors=2,plot=True)
+                                                    fit_neighbors=2,plot=False)
 
     beta_ = beta_info['beta']
     # if beta_ < 1 or beta_ > 1.2:

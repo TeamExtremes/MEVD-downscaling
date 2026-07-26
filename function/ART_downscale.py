@@ -620,7 +620,7 @@ def down_wei(Ns, Cs, Ws, L, L0, beta, par_acf, acf):
 
     return Nd, Cd, Wd, gam, fval
 
-def down_wei_beta_alpha(Ns, Cs, Ws, beta, gam):
+def down_wei_beta_gamma(Ns, Cs, Ws, beta, gam):
     Ns = np.asarray(Ns)  # check if scalar input - should be the same for N,C,W
     Cs = np.asarray(Cs)
     Ws = np.asarray(Ws)
@@ -1131,7 +1131,7 @@ def down_year_parameters(N, C, W, BETA, GAMMA):
                 Wd[:,i,j] = np.nan
             else:
                 # Nd_, Cd_, Wd_ = down_wei_beta_alpha_update(N[:,i,j], C[:,i,j], W[:,i,j], BETA[i,j], GAMMA[i,j])
-                Nd_, Cd_, Wd_ = down_wei_beta_alpha(N[:,i,j], C[:,i,j], W[:,i,j], BETA[i,j], GAMMA[i,j])
+                Nd_, Cd_, Wd_ = down_wei_beta_gamma(N[:,i,j], C[:,i,j], W[:,i,j], BETA[i,j], GAMMA[i,j])
                 Nd[:,i,j] = Nd_
                 Cd[:,i,j] = Cd_
                 Wd[:,i,j] = Wd_
