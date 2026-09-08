@@ -103,6 +103,7 @@ else:
 
 print()
 print(f'Product: {product}')
+print(f'Area   : {area}')
 print(f'xscale : {origin_x_t[0]} km to {target_x_t[0]} km')
 print(f'tscale : {origin_x_t[1]} hr to {target_x_t[1]} hr')
 
